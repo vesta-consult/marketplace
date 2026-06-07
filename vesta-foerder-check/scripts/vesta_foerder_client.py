@@ -85,10 +85,11 @@ def _build_a2a_message(profil: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _extract_empfehlung(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
-    """Liest die A2A-Antwort aus (Artifact ``foerder_empfehlung`` mit DataPart).
+def _extract_empfehlung(response: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
+    """Liest die A2A-Antwort aus (Artifact ``foerder_empfehlung``).
 
-    Returns: (empfehlung-dict, status-zeile).
+    Returns: (empfehlung-dict, report-html, status-zeile). Der DataPart trägt die
+    strukturierte Empfehlung, der text/html-Part das zusammenfassende Dokument.
     """
     task = response.get("task", response)
     state = (task.get("status") or {}).get("state")
@@ -105,10 +106,12 @@ def _extract_empfehlung(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
     if not artifacts:
         raise RuntimeError("Vesta-Antwort enthält kein Artifact.")
     data: dict[str, Any] = {}
+    html = ""
     for part in artifacts[0].get("parts") or []:
-        if isinstance(part.get("data"), dict):
+        if isinstance(part.get("data"), dict) and not data:
             data = part["data"]
-            break
+        if isinstance(part.get("text"), str) and not html:
+            html = part["text"]
     if not data:
         raise RuntimeError("Kein DataPart im Vesta-Artifact.")
     status_line = ""
@@ -117,7 +120,7 @@ def _extract_empfehlung(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
         if isinstance(part.get("text"), str):
             status_line = part["text"]
             break
-    return data, status_line
+    return data, html, status_line
 
 
 def cmd_card() -> int:
@@ -209,7 +212,7 @@ def cmd_empfehlung(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        empfehlung, status_line = _extract_empfehlung(resp.json())
+        empfehlung, report_html, status_line = _extract_empfehlung(resp.json())
     except RuntimeError as exc:
         print(f"[FEHLER] {exc}", file=sys.stderr)
         return 1
@@ -222,6 +225,11 @@ def cmd_empfehlung(args: argparse.Namespace) -> int:
     if haft:
         print("\n── Haftungsausschluss ──")
         print(haft)
+    # Zusammenfassendes Dokument ablegen (vom Vesta-Agenten erzeugt, mit Haftungsausschluss).
+    if report_html:
+        out = Path(args.report or "foerder-check-report.html")
+        out.write_text(report_html, encoding="utf-8")
+        print(f"\nZusammenfassung als Dokument gespeichert: {out}")
     return 0
 
 
@@ -238,6 +246,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--bundesland", default=None, help="2-Buchstaben-Code (be, by, nrw …)"
+    )
+    p.add_argument(
+        "--report",
+        default=None,
+        help="Zielpfad für das HTML-Dokument (Default: foerder-check-report.html)",
     )
     args = parser.parse_args(argv)
     if args.cmd == "card":

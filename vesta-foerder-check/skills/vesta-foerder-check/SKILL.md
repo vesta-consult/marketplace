@@ -49,6 +49,9 @@ stoppe.
    `  --zielgruppe <…> --assetklasse <…> --vorhaben-ebene <…> --gegenstand <a,b> --bundesland <xx>`
    Du bekommst JSON: `eligible[]` (mit `massnahmen_fit`, `foerderhoehe`, ggf. `haftung`),
    `kumulierung[]`, `discovery_hinweise[]`, `haftungsausschluss`, `ausgeschlossen[]`.
+   Zusätzlich legt der Client ein **zusammenfassendes Dokument** ab
+   (`foerder-check-report.html`, vom Vesta-Agenten erzeugt, mit Haftungsausschluss).
+   Mit `--report <pfad>` lässt sich der Zielpfad setzen.
 
 5. **Aufbereiten — ehrlich und geschichtet.**
    - **Passende Programme**: Name · Ebene/Förderart · Maßnahmen-Fit. Förderhöhe NUR so
@@ -59,6 +62,8 @@ stoppe.
    - **`sign_off` offen** (`haftung`-Feld): als „vor Beratungsaussage prüfen" kenntlich machen.
    - **Discovery-Hinweise**: als „zusätzlich bekannt, aber NICHT verifiziert" führen, klar
      abgesetzt von den belastbaren Treffern, mit Primärquellen-Pointer.
+   - **Dokument**: weise den Nutzer auf das gespeicherte `foerder-check-report.html` hin
+     (öffenbar im Browser, druck-/PDF-fähig) — es fasst alles inkl. Haftungsausschluss zusammen.
 
 6. **Haftungsausschluss — IMMER am Ende.** Gib den vollständigen `haftungsausschluss.text`
    aus der Antwort **wörtlich und sichtbar** aus. Niemals weglassen, kürzen oder abschwächen.
