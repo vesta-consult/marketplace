@@ -1,6 +1,6 @@
 {
   "name": "vesta-foerder-check",
   "description": "Vesta Förder-Check: ermittelt per A2A zu einem Mandanten-Profil die in Frage kommenden Bau-Förderprogramme (Bund/Land) inkl. Kumulierbarkeit, Förderhöhen-Schätzung und Discovery-Hinweisen — deterministisch über einen primär-verifizierten Kern, unverbindliche Orientierung mit Haftungsausschluss.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": { "name": "Vesta", "url": "https://vesta-consult.de" }
 }
