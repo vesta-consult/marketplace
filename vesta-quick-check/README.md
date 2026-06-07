@@ -10,7 +10,7 @@ IFC verlässt deinen Rechner nicht.
 
 ## Installation
 ```
-/plugin marketplace add V2Hannes/vesta-quick-check
+/plugin marketplace add vesta-consult/marketplace
 /plugin install vesta-quick-check
 ```
 

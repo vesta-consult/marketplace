@@ -12,7 +12,7 @@ der dünne Client + der Profil-extrahierende Agent.
 ## Installation
 
 ```
-/plugin marketplace add V2Hannes/vesta-foerder-check
+/plugin marketplace add vesta-consult/marketplace
 /plugin install vesta-foerder-check
 /vesta-foerder-check:setup <rahmenvertrag-token>
 ```
