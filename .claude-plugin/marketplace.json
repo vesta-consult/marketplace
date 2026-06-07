@@ -1,0 +1,19 @@
+{
+  "name": "vesta",
+  "owner": { "name": "vesta sustainability consulting", "url": "https://vesta-consult.de" },
+  "metadata": {
+    "description": "Vesta-Marketplace: Claude-Code-Plugins für Vestas agentische Dienste (A2A) — Bauphysik, Nachhaltigkeit, LCA, Förderung."
+  },
+  "plugins": [
+    {
+      "name": "vesta-quick-check",
+      "source": "./vesta-quick-check",
+      "description": "Vesta LCA Quick-Check (A2A) — IFC + Energiekonzept → EN-15978-Ökobilanz-Kennwert (kg CO₂-eq/m²·a)."
+    },
+    {
+      "name": "vesta-foerder-check",
+      "source": "./vesta-foerder-check",
+      "description": "Vesta Förder-Check (A2A) — Mandanten-Profil → passende Bau-Förderprogramme (Bund/Land) inkl. Kumulierung + Förderhöhe."
+    }
+  ]
+}
