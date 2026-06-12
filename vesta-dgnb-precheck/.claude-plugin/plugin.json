@@ -1,0 +1,6 @@
+{
+  "name": "vesta-dgnb-precheck",
+  "description": "Vesta DGNB-Pre-Check: ermittelt per A2A früh in der Planungsphase zu Nutzungsprofil + angestrebter DGNB-Stufe eine Einschätzung der Erreichbarkeit (gewichteter Erfüllungsgrad + erreichte Stufe) und einen priorisierten Maßnahmenkatalog — deterministisch über einen sign-off-verifizierten Kriterienkern, unverbindliche Orientierung mit Haftungsausschluss.",
+  "version": "1.0.0",
+  "author": { "name": "Vesta", "url": "https://vesta-consult.de" }
+}

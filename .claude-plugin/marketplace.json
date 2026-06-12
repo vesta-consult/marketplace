@@ -14,6 +14,11 @@
       "name": "vesta-foerder-check",
       "source": "./vesta-foerder-check",
       "description": "Vesta Förder-Check (A2A) — Mandanten-Profil → passende Bau-Förderprogramme (Bund/Land) inkl. Kumulierung + Förderhöhe."
+    },
+    {
+      "name": "vesta-dgnb-precheck",
+      "source": "./vesta-dgnb-precheck",
+      "description": "Vesta DGNB-Pre-Check (A2A) — Nutzungsprofil + Zielstufe (Silber/Gold/Platin) → Einschätzung der Erreichbarkeit + priorisierter Maßnahmenkatalog, früh in der Planungsphase."
     }
   ]
 }
