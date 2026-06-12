@@ -32,13 +32,26 @@ REQUIRED_FIELDS = [
     "nfa_m2 (Netto-Nutzfläche, m²)",
     "rsp_years (Referenz-Studien-Periode, a)",
     "components[].name (Bauteil-Bezeichnung)",
-    "components[].area_m2 (Bauteilfläche, m²)",
+    "components[].area_m2 (Bauteilfläche, m² — entfällt bei Stück-Bauteilen)",
     "components[].layers[].material (Material-Match-String)",
-    "components[].layers[].quantity (Schichtdicke, m)",
+    "components[].layers[].quantity (Schichtdicke in m | Stückzahl bei piece)",
+    "components[].layers[].unit_basis (optional: kg|m2|m3|piece — 'piece' für Fenster/Türen)",
     "operational[].energy_carrier (Energieträger-Key)",
     "operational[].annual_kwh_per_m2 (Endenergie, kWh/m²·a)",
     "operational[].purpose (heating/electricity/cooling)",
 ]
+
+
+def _piece_only(comp: dict[str, Any]) -> bool:
+    """True, wenn alle Layer Stück-basiert sind (Fenster/Türen) — dann
+    trägt quantity die Stückzahl und area_m2 entfällt."""
+    layers = comp.get("layers")
+    if not isinstance(layers, list) or not layers:
+        return False
+    return all(
+        isinstance(layer, dict) and layer.get("unit_basis") == "piece"
+        for layer in layers
+    )
 
 
 def _is_number(x: Any) -> bool:
@@ -64,7 +77,10 @@ def validate_payload(payload: dict[str, Any]) -> list[str]:
         for i, comp in enumerate(components):
             if not str(comp.get("name") or "").strip():
                 gaps.append(f"components[{i}].name fehlt (Bauteil-Bezeichnung)")
-            if not _is_number(comp.get("area_m2")) or comp.get("area_m2", 0) <= 0:
+            piece = _piece_only(comp)
+            if not piece and (
+                not _is_number(comp.get("area_m2")) or comp.get("area_m2", 0) <= 0
+            ):
                 gaps.append(f"components[{i}].area_m2 fehlt oder ≤ 0")
             layers = comp.get("layers")
             if not isinstance(layers, list) or not layers:
@@ -80,8 +96,13 @@ def validate_payload(payload: dict[str, Any]) -> list[str]:
                     not _is_number(layer.get("quantity"))
                     or layer.get("quantity", 0) <= 0
                 ):
+                    einheit = (
+                        "Stückzahl"
+                        if layer.get("unit_basis") == "piece"
+                        else "Schichtdicke in m"
+                    )
                     gaps.append(
-                        f"components[{i}].layers[{j}].quantity fehlt oder ≤ 0 (Schichtdicke in m)"
+                        f"components[{i}].layers[{j}].quantity fehlt oder ≤ 0 ({einheit})"
                     )
 
     operational = payload.get("operational")
@@ -209,6 +230,8 @@ def cmd_card() -> int:
     print(
         "\nHinweis: Material-Strings müssen ÖkobauDat-matchbar sein "
         "(z.B. 'Beton C25/30', 'EPS-Hartschaum'). quantity = Schichtdicke in m."
+        "\nStück-Bauteile (Fenster/Türen): unit_basis='piece' und quantity = "
+        "Stückzahl beibehalten — NICHT in Dicke/Fläche umrechnen, area_m2 weglassen."
     )
     return 0
 

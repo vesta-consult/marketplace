@@ -1,6 +1,6 @@
 {
   "name": "vesta-quick-check",
   "description": "Vesta LCA Quick-Check: extrahiert Bauteile aus IFC + Betriebsenergie aus Doc-Dateien und verhandelt per A2A mit dem Vesta-Agenten einen Ökobilanz-Kennwert (kg CO2-eq/m²·a). Rohes IFC bleibt lokal.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": { "name": "Vesta", "url": "https://vesta-consult.de" }
 }
