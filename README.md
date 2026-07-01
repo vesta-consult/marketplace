@@ -25,6 +25,7 @@ Danach den Rahmenvertrag-Token hinterlegen (von Vesta erhalten):
 |---|---|---|
 | **vesta-quick-check** | EN-15978-Gebäude-Ökobilanz (kg CO₂-eq/m²·a) | IFC + Energiekonzept |
 | **vesta-foerder-check** | Passende Bau-Förderprogramme (Bund/Land) inkl. Kumulierung + Förderhöhe | Mandanten-Profil (Freitext) |
+| **vesta-dgnb-precheck** | DGNB-Zielvereinbarung (Silber/Gold/Platin): erreichbarer Erfüllungsgrad + priorisierter Maßnahmenkatalog | Nutzungsprofil + Zielstufe + Punkte-Einschätzung je Kriterium |
 
 Welche Leistungen dein Token freischaltet, regelt dein Rahmenvertrag.
 
