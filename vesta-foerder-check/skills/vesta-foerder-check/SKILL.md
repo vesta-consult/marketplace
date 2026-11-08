@@ -67,11 +67,13 @@ stoppe.
 
    Exit-Codes von `modell3d.py`:
    - **0** — Szene geschrieben; die letzte Ausgabezeile nennt u. a. `bundesland` (für das Profil nutzbar).
-   - **3** — Adresse unklar: nenne die Kandidaten aus der Ausgabe und frag nach. Nicht raten.
+     In Ländern ohne automatischen Download (HB, HH, HE, SL, SN, ST, TH) ist es eine **Lage-Szene**: Das
+     Dashboard zeigt den Standort auf der Karte, ohne Gebäudemodell. Ohne Hausnummer in der Adresse wird kein
+     Gebäude als „Ihr Gebäude“ markiert, nur die Umgebung gezeigt.
+   - **3** — Adresse unklar (kein, mehrdeutiger oder nur ungenauer Treffer, etwa ohne die genannte
+     Hausnummer): nenne die Kandidaten aus der Ausgabe und frag nach. Nicht raten.
    - **4** — Download über 200 MB: nenne die Größe und frag, ob geladen werden soll; bei Ja erneut
      mit `--erlaube-gross`.
-   - **5** — Für dieses Land gibt es (noch) keinen automatischen Download: Hinweis aus der Ausgabe
-     wiedergeben, ohne 3D weiter.
    - **6** — Dateiformat nicht unterstützt: um einen Export als IFC oder CityGML bitten, ohne 3D weiter.
    - **2** — sonstiger Fehler: kurz erklären, ohne 3D weiter.
 
@@ -86,7 +88,8 @@ stoppe.
    `  --projektordner <projektordner> [--projektname "<name>"]`
 
    Projektname: aus den Unterlagen, sonst lässt der Client den Ordnernamen stehen. Keine
-   Personennamen als Projektname verwenden.
+   Personennamen als Projektname verwenden. Lehnt Vesta die Szene ab, wiederholt der Client den Lauf
+   automatisch ohne 3D (Warnung auf stderr); die Förderprüfung hängt nie am 3D.
    Du bekommst JSON (`eligible[]`, `kumulierung[]`, `discovery_hinweise[]`, `ausgeschlossen[]`,
    ggf. `potenzial_gestapelt`, `haftungsausschluss`), und der Client legt das **Dashboard**
    `foerder-check-dashboard.html` im Projektordner ab.

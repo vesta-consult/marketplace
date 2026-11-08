@@ -8,7 +8,7 @@ import lod2_laender as ll
 
 def test_kacheln_by_zwei_kacheln_nord():
     # 2-km-Raster: Radius 350 m schneidet die Kachelgrenze bei N = 5516 km
-    assert ll.kacheln("by", 566900.0, 5516300.0, 350) == [(566, 5514), (566, 5516)]
+    assert ll.kacheln("by", 726500.0, 5431950.0, 100) == [(726, 5430), (726, 5432)]
 
 
 def test_kacheln_ecke():

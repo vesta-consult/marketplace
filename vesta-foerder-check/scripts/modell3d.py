@@ -82,7 +82,7 @@ def _aus_modell(pfad: Path) -> dict:
         "quelle": "Modell aus Ihren Unterlagen",
         "lizenz": None,
         "abgerufen": _heute(),
-        "datei": pfad.name,
+        "datei": pfad.suffix.lower() or None,  # nur die Endung, der Dateiname bleibt beim Kunden
     }
     if endung == ".ifc":
         import szene_ifc
@@ -114,12 +114,35 @@ def _aus_modell(pfad: Path) -> dict:
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+def _lage_szene(lat: float, lon: float, land: str, hinweis: str, radius: float) -> dict:
+    """Szene ohne Gebäude, nur mit Lage (vesta-szene/1)."""
+    import base64
+    import datetime as _dt
+    import gzip
+
+    return {
+        "format": "vesta-szene/1",
+        "herkunft": {"art": "lod2", "land": land, "quelle": "Lage: OpenStreetMap Nominatim (ODbL), kein Gebäudemodell",
+                     "lizenz": "ODbL", "abgerufen": _dt.date.today().isoformat(), "datei": None},
+        "origin": [round(lon, 7), round(lat, 7)],
+        "radius_m": float(radius),
+        "counts": {"buildings": 0, "vertices": 0, "triangles": 0, "edges": 0},
+        "starts": [0],
+        "edge_starts": [0],
+        "buildings": [],
+        "ziel": None,
+        "hinweis": hinweis[:300],
+        "bin_gz_b64": base64.b64encode(gzip.compress(b"")).decode("ascii"),
+    }
+
+
 def _aus_lod2(a: argparse.Namespace) -> tuple[dict, str]:
     with lod2_laden.http_client() as client:
         if a.adresse is not None:
             try:
                 t = lod2_laden.waehle_treffer(
-                    lod2_laden.geocode(a.adresse, client=client)
+                    lod2_laden.geocode(a.adresse, client=client),
+                    mit_hausnummer=lod2_laden.hat_hausnummer(a.adresse),
                 )
             except lod2_laden.UnklareAdresse as e:
                 raise _Abbruch(
@@ -128,6 +151,7 @@ def _aus_lod2(a: argparse.Namespace) -> tuple[dict, str]:
                     {"kandidaten": [asdict(k) for k in e.kandidaten]},
                 ) from None
             lat, lon, land = t.lat, t.lon, a.bundesland or t.bundesland
+            genau = t.hausnummer and t.rang >= 30
             _info(f"Lage gefunden: {t.anzeige}")
         else:
             if a.lon is None:
@@ -135,11 +159,12 @@ def _aus_lod2(a: argparse.Namespace) -> tuple[dict, str]:
             if not a.bundesland:
                 raise _Abbruch(2, "Bei --lat/--lon ist --bundesland Pflicht.")
             lat, lon, land = a.lat, a.lon, a.bundesland
+            genau = True
         if not land:
             raise _Abbruch(2, "Bundesland nicht erkannt, bitte --bundesland angeben.")
         if land in lod2_laender.HINWEIS:
-            hinweis = lod2_laender.HINWEIS[land]
-            raise _Abbruch(5, hinweis, {"hinweis": hinweis})
+            # Kein automatischer Download: Lage-Szene ohne Gebäude, das Dashboard zeigt den Standort auf der Karte.
+            return _lage_szene(lat, lon, land, lod2_laender.HINWEIS[land], a.radius), land
         q = lod2_laender.LAENDER[land]
         e, n = lod2_laden.nach_utm(lat, lon, q.epsg)
 
@@ -212,6 +237,12 @@ def _aus_lod2(a: argparse.Namespace) -> tuple[dict, str]:
         raise _Abbruch(
             2, f"Im Umkreis von {a.radius:.0f} m stehen laut LoD2 keine Gebäude."
         ) from None
+    if not genau:
+        # Treffer nur auf Straße oder Platz: kein Gebäude als „Ihr Gebäude“ raten.
+        for b in sz["buildings"]:
+            b["ziel"] = False
+        sz["ziel"] = None
+        sz["hinweis"] = "Adresse ohne Hausnummer gefunden: kein Gebäude hervorgehoben, nur die Umgebung."
     return sz, land
 
 
@@ -258,7 +289,7 @@ def main(argv: list[str] | None = None) -> int:
         _info(f"Fehler: {type(e).__name__}: {e}")
         return 2
 
-    text = json.dumps(sz, ensure_ascii=False, separators=(",", ":"))
+    text = json.dumps(sz, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(text, encoding="utf-8")
     if sz["hinweis"]:

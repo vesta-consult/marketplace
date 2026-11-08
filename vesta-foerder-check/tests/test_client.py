@@ -118,3 +118,30 @@ def test_report_alias(umgebung):
 
 def test_default_url():
     assert c.DEFAULT_A2A_URL == "https://agents.vesta-consult.de/customer"
+
+
+def test_neuer_versuch_ohne_szene(umgebung, capsys):
+    gesendet = []
+
+    def handler(request):
+        data = json.loads(request.content)["message"]["parts"][0]["data"]
+        gesendet.append(data)
+        if "szene" in data:
+            return httpx.Response(422, json={"detail": "szene ungültig"})
+        return httpx.Response(200, json=_antwort())
+
+    pfad = umgebung / "szene.json"
+    pfad.write_text(json.dumps({"format": "vesta-szene/1", "bin_gz_b64": "QUJD"}))
+    rc = c.cmd_empfehlung(_args("--szene", str(pfad)), transport=httpx.MockTransport(handler))
+    assert rc == 0
+    assert len(gesendet) == 2 and "szene" in gesendet[0] and "szene" not in gesendet[1]
+    assert "ohne 3D" in capsys.readouterr().err
+    projekt = json.loads((umgebung / ".vesta" / "foerder-check.json").read_text())
+    assert projekt["laeufe"][-1]["mit_3d"] is False
+
+
+def test_szene_mit_nan_nicht_gesendet(tmp_path, capsys):
+    pfad = tmp_path / "szene.json"
+    pfad.write_text('{"format": "vesta-szene/1", "buildings": [{"h": NaN}], "bin_gz_b64": "QUJD"}')
+    assert c.lade_szene(pfad) is None
+    assert "ungültig" in capsys.readouterr().err

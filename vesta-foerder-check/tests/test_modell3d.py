@@ -71,7 +71,7 @@ def test_cli_modell_citygml(tmp_path, capsys):
     sz = json.loads(out.read_text())
     pruefe_format(sz)
     assert sz["herkunft"]["art"] == "citygml"
-    assert sz["herkunft"]["datei"] == "box_citygml10.gml"
+    assert sz["herkunft"]["datei"] == ".gml"  # nur die Endung, der Dateiname bleibt beim Kunden
     assert sz["origin"] is not None  # CRS aus srsName erkannt
 
 
@@ -120,30 +120,26 @@ def test_cli_adresse_leer_3(tmp_path, capsys, ohne_netz):
     assert _letzte_zeile(capsys) == {"kandidaten": []}
 
 
-def test_cli_hinweisland_5(tmp_path, capsys, ohne_netz):
+def test_cli_hinweisland_lage_szene(tmp_path, capsys, ohne_netz):
     t = lod2_laden.Treffer(53.5, 10.0, "hh", "Musterweg 1, Musterstadt")
     ohne_netz.setattr(lod2_laden, "geocode", lambda adresse, client: [t])
-    assert (
-        modell3d.main(["--adresse", "Musterweg 1", "--out", str(tmp_path / "s.json")])
-        == 5
-    )
-    assert "Hamburg" in _letzte_zeile(capsys)["hinweis"]
+    out = tmp_path / "s.json"
+    assert modell3d.main(["--adresse", "Musterweg 1", "--out", str(out)]) == 0
+    sz = json.loads(out.read_text())
+    assert sz["counts"]["buildings"] == 0 and sz["ziel"] is None
+    assert sz["origin"] == [10.0, 53.5]
+    assert "Hamburg" in sz["hinweis"]
+    assert sz["herkunft"]["land"] == "hh"
+    assert _letzte_zeile(capsys)["ziel"] is False
 
 
 def test_cli_bundesland_ueberschreibt_treffer(tmp_path, capsys, ohne_netz):
     t = lod2_laden.Treffer(48.1, 11.5, "by", "Musterweg 1, Musterstadt")
     ohne_netz.setattr(lod2_laden, "geocode", lambda adresse, client: [t])
-    rc = modell3d.main(
-        [
-            "--adresse",
-            "Musterweg 1",
-            "--bundesland",
-            "th",
-            "--out",
-            str(tmp_path / "s.json"),
-        ]
-    )
-    assert rc == 5
+    out = tmp_path / "s.json"
+    rc = modell3d.main(["--adresse", "Musterweg 1", "--bundesland", "th", "--out", str(out)])
+    assert rc == 0
+    assert json.loads(out.read_text())["herkunft"]["land"] == "th"
 
 
 def test_cli_lat_lon_braucht_bundesland_2(tmp_path, ohne_netz):
@@ -249,3 +245,19 @@ def test_cli_keine_kachel_2(tmp_path, ohne_netz):
         ]
     )
     assert rc == 2
+
+
+def test_cli_lod2_ohne_hausnummer_kein_ziel(tmp_path, capsys, ohne_netz):
+    """Treffer nur auf Straße oder Platz: Umgebung zeigen, aber kein Gebäude als „Ihr Gebäude“ raten."""
+    lat, lon = _punkt_wgs84(500005.0, 5400005.0)
+    t = lod2_laden.Treffer(lat, lon, "by", "Musterweg, Musterstadt", hausnummer=False, rang=26)
+    ohne_netz.setattr(lod2_laden, "geocode", lambda adresse, client: [t])
+    ohne_netz.setattr(lod2_laden, "groesse", lambda url, client: 12_345)
+    ohne_netz.setattr(lod2_laden, "lade", lambda url, client, max_bytes: [BOX10])
+    out = tmp_path / "s.json"
+    assert modell3d.main(["--adresse", "Musterweg, Musterstadt", "--out", str(out)]) == 0
+    sz = json.loads(out.read_text())
+    pruefe_format(sz)
+    assert sz["ziel"] is None
+    assert not any(b["ziel"] for b in sz["buildings"])
+    assert "Hausnummer" in sz["hinweis"]

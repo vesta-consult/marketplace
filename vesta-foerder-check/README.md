@@ -32,7 +32,7 @@ Der Agent bildet ein Profil aus Zielgruppe, Assetklasse, Ebene, Vorhaben und Bun
 
 ## Ergebnis: Dashboard
 
-Der Client legt `foerder-check-dashboard.html` im Projektordner ab, eine Datei zum Öffnen im Browser und zum Drucken:
+Der Client legt `foerder-check-dashboard.html` im Projektordner ab, eine Datei zum Öffnen im Browser und zum Drucken. Aufbau wie die Vesta-Indikationen: Karte oder 3D-Modell vollflächig, links die Kapitel, rechts der Bericht mit Zusammenfassung, Vorhaben und Gebäude, Programmen, Förderspannen, Kombination, weiteren Hinweisen, nicht passenden Programmen, nächsten Schritten, Quellen und Glossar. Inhalt:
 
 - passende Programme nach Ebene, mit Förderart, Maßnahmenbezug und Förderhöhe, soweit bezifferbar; je Programm Eckwerte, Boni, Quellen und Prüfstand
 - Kumulierung als Matrix: kombinierbar, schließt sich aus, konditional
@@ -48,7 +48,7 @@ Liegt in den Unterlagen ein Gebäudemodell (IFC oder CityGML), zeigt das Dashboa
 
 | Automatisch | Bayern, Nordrhein-Westfalen, Baden-Württemberg, Berlin, Brandenburg, Mecklenburg-Vorpommern, Niedersachsen, Schleswig-Holstein, Rheinland-Pfalz |
 |---|---|
-| Noch nicht automatisch | Bremen, Hamburg, Hessen, Saarland, Sachsen, Sachsen-Anhalt, Thüringen (Dashboard ohne 3D, mit Hinweis auf das Portal des Landes) |
+| Noch nicht automatisch | Bremen, Hamburg, Hessen, Saarland, Sachsen, Sachsen-Anhalt, Thüringen: Das Dashboard zeigt den Standort auf der Karte, ohne Gebäudemodell, mit Hinweis auf das Portal des Landes |
 
 Geladene Kacheln bleiben im Nutzer-Cache (unter macOS `~/Library/Caches/vesta/lod2`, unter Linux `~/.cache/vesta/lod2`, unter Windows im lokalen AppData). Über 200 MB fragt der Agent vorher. Die Kennwerte im Modell dienen der Orientierung, für Anträge gelten die Flächen aus den Planunterlagen.
 

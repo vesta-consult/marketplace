@@ -79,6 +79,8 @@ class Treffer:
     lon: float
     bundesland: str | None
     anzeige: str
+    hausnummer: bool = True  # Nominatim kennt die Hausnummer (address.house_number)
+    rang: int = 30  # place_rank: 30 Gebäude/Adresse, 26/27 Straße, kleiner Ort und Region
 
 
 class UnklareAdresse(Exception):
@@ -220,9 +222,19 @@ def geocode(adresse: str, *, client: httpx.Client) -> list[Treffer]:
             lon=float(e["lon"]),
             bundesland=_bundesland(e.get("address") or {}),
             anzeige=str(e.get("display_name", ""))[:300],
+            hausnummer=bool((e.get("address") or {}).get("house_number")),
+            rang=int(e.get("place_rank") or 0),
         )
         for e in r.json()
     ]
+
+
+_HAUSNUMMER = re.compile(r"(?<![\d.])(\d{1,4}\s?[a-zA-Z]?)(?![\d.])")
+
+
+def hat_hausnummer(adresse: str) -> bool:
+    """Enthält die Anfrage eine Hausnummer (eine Zahl mit 1 bis 4 Stellen, keine Postleitzahl)?"""
+    return any(len(re.sub(r"\D", "", m)) < 5 for m in _HAUSNUMMER.findall(adresse or ""))
 
 
 def _abstand_m(a: Treffer, b: Treffer) -> float:
@@ -232,10 +244,17 @@ def _abstand_m(a: Treffer, b: Treffer) -> float:
     return 2 * 6371008.8 * math.asin(math.sqrt(h))
 
 
-def waehle_treffer(treffer: list[Treffer]) -> Treffer:
-    """Erster Treffer, wenn alle Treffer an derselben Stelle liegen. Sonst nicht raten."""
+def waehle_treffer(treffer: list[Treffer], *, mit_hausnummer: bool = False) -> Treffer:
+    """Erster Treffer, wenn alle Treffer an derselben Stelle liegen. Sonst nicht raten.
+
+    Unklar ist auch ein Treffer, der nur eine Straße oder einen Ort trifft (place_rank unter 26), und einer ohne
+    Hausnummer, wenn die Anfrage eine enthielt: dann läge das „nächste Gebäude“ irgendwo an der Straße.
+    """
     if not treffer:
         raise UnklareAdresse([])
+    erster = treffer[0]
+    if erster.rang < 26 or (mit_hausnummer and not erster.hausnummer):
+        raise UnklareAdresse([erster])
     for i, a in enumerate(treffer):
         for b in treffer[i + 1 :]:
             if _abstand_m(a, b) > MAX_ABSTAND_M:
@@ -343,6 +362,15 @@ def entpacke_zip(zip_pfad: Path, ziel: Path) -> list[Path]:
     return sorted(aus for _, aus in auswahl)
 
 
+def _ist_citygml(pfad: Path) -> bool:
+    """Grobe Prüfung des Dateikopfs: XML mit CityModel, keine HTML-Fehlerseite."""
+    with pfad.open("rb") as f:
+        kopf = f.read(4096).lstrip(b"\xef\xbb\xbf \t\r\n").lower()
+    if kopf.startswith(b"<!doctype html") or kopf.startswith(b"<html"):
+        return False
+    return kopf.startswith(b"<?xml") or b"citymodel" in kopf
+
+
 def lade(url: str, *, client: httpx.Client, max_bytes: int) -> list[Path]:
     """Lädt eine Kachel in den Cache (oder nimmt die vorhandene) und liefert die GML-Pfade."""
     ordner = cache_ordner()
@@ -356,6 +384,9 @@ def lade(url: str, *, client: httpx.Client, max_bytes: int) -> list[Path]:
     if not datei.is_file():
         _download(url, datei, client=client, max_bytes=max_bytes)
     if not zipfile.is_zipfile(datei):
+        if not _ist_citygml(datei):
+            datei.unlink(missing_ok=True)
+            raise KachelFehlt(f"Antwort ist keine CityGML-Kachel: {url}")
         return [datei]
     try:
         pfade = entpacke_zip(datei, entpackt)

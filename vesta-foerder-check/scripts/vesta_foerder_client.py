@@ -142,6 +142,11 @@ def lade_szene(pfad: Path) -> dict[str, Any] | None:
             f"[WARNUNG] Szene nicht lesbar ({exc}), Dashboard ohne 3D.", file=sys.stderr
         )
         return None
+    try:
+        json.dumps(szene, allow_nan=False)
+    except ValueError:
+        print("[WARNUNG] Szene ungültig (NaN oder Infinity), Dashboard ohne 3D.", file=sys.stderr)
+        return None
     if len(str(szene.get("bin_gz_b64", ""))) > MAX_SZENE_B64:
         print(
             "[WARNUNG] Szene zu groß (über 8 MB), Dashboard ohne 3D. Radius verkleinern.",
@@ -272,34 +277,44 @@ def cmd_empfehlung(args: argparse.Namespace, *, transport: Any = None) -> int:
     ordner = Path(args.projektordner or Path.cwd())
     projekt = lade_oder_lege_projekt(ordner, args.projektname)
     szene = lade_szene(Path(args.szene)) if args.szene else None
-    envelope = _build_a2a_message(
-        baue_profil(args),
-        szene=szene,
-        projekt={"id": projekt["projekt_id"], "name": projekt["name"]},
-    )
-    try:
-        resp = sende(url, token, envelope, transport=transport)
-    except httpx.HTTPError as exc:
-        print(f"[FEHLER] A2A-Request fehlgeschlagen: {exc}", file=sys.stderr)
-        return 2
-    if resp.status_code in (401, 403):
-        print(
-            f"[FEHLER] Auth abgelehnt (HTTP {resp.status_code}) — Token/Vertrag prüfen "
-            "(ist customer.foerder_check in deinem Rahmenvertrag freigeschaltet?).",
-            file=sys.stderr,
-        )
-        return 2
-    if resp.status_code >= 400:
-        print(
-            f"[FEHLER] Vesta lehnte ab (HTTP {resp.status_code}): {resp.text[:500]}",
-            file=sys.stderr,
-        )
-        return 1
-    try:
-        empfehlung, dashboard_html, status_line = _extract_empfehlung(resp.json())
-    except RuntimeError as exc:
-        print(f"[FEHLER] {exc}", file=sys.stderr)
-        return 1
+    profil = baue_profil(args)
+    projekt_kurz = {"id": projekt["projekt_id"], "name": projekt["name"]}
+    # Die Förderprüfung hängt nie am 3D: Lehnt Vesta die Szene ab, einmal ohne Szene wiederholen.
+    versuche = [szene, None] if szene is not None else [None]
+    for i, sz in enumerate(versuche):
+        envelope = _build_a2a_message(profil, szene=sz, projekt=projekt_kurz)
+        letzter = i == len(versuche) - 1
+        try:
+            resp = sende(url, token, envelope, transport=transport)
+        except httpx.HTTPError as exc:
+            if not letzter:
+                print(f"[WARNUNG] Übertragung mit 3D-Szene fehlgeschlagen ({exc}), neuer Versuch ohne 3D.", file=sys.stderr)
+                continue
+            print(f"[FEHLER] A2A-Request fehlgeschlagen: {exc}", file=sys.stderr)
+            return 2
+        if resp.status_code in (401, 403):
+            print(
+                f"[FEHLER] Auth abgelehnt (HTTP {resp.status_code}) — Token/Vertrag prüfen "
+                "(ist customer.foerder_check in deinem Rahmenvertrag freigeschaltet?).",
+                file=sys.stderr,
+            )
+            return 2
+        if resp.status_code >= 400:
+            if not letzter:
+                print(f"[WARNUNG] Vesta lehnte die 3D-Szene ab (HTTP {resp.status_code}), neuer Versuch ohne 3D.", file=sys.stderr)
+                continue
+            print(f"[FEHLER] Vesta lehnte ab (HTTP {resp.status_code}): {resp.text[:500]}", file=sys.stderr)
+            return 1
+        try:
+            empfehlung, dashboard_html, status_line = _extract_empfehlung(resp.json())
+        except (RuntimeError, ValueError) as exc:
+            if not letzter:
+                print(f"[WARNUNG] Lauf mit 3D-Szene gescheitert ({exc}), neuer Versuch ohne 3D.", file=sys.stderr)
+                continue
+            print(f"[FEHLER] {exc}", file=sys.stderr)
+            return 1
+        szene = sz
+        break
 
     if status_line:
         print(status_line)

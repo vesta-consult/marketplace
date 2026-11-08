@@ -30,10 +30,11 @@ def _nominatim(eintraege: list[dict]):
 
 
 def _eintrag(lat, lon, state, iso=None, name="Musterweg 1, Musterstadt"):
-    adr = {"state": state}
+    adr = {"state": state, "house_number": "1"}
     if iso:
         adr["ISO3166-2-lvl4"] = iso
-    return {"lat": str(lat), "lon": str(lon), "display_name": name, "address": adr}
+    # wie die echte Nominatim-Antwort auf eine Hausadresse: place_rank 30, mit Hausnummer
+    return {"lat": str(lat), "lon": str(lon), "display_name": name, "address": adr, "place_rank": 30}
 
 
 def test_geocode_eindeutig():
@@ -368,3 +369,43 @@ def test_http_client_nutzt_proxy(monkeypatch):
     with ld.http_client() as c:
         pools = [type(t._pool).__name__ for t in c._transport._transporte]
     assert pools and all(p == "HTTPProxy" for p in pools)
+
+
+# --- Genauigkeit der Geokodierung: kein Raten bei Treffer ohne Hausnummer ------------------
+
+def test_hat_hausnummer():
+    assert ld.hat_hausnummer("Musterweg 8, 80331 Musterstadt")
+    assert ld.hat_hausnummer("Musterweg 12a, Musterstadt")
+    assert not ld.hat_hausnummer("Musterweg, 80331 Musterstadt")
+
+
+def test_treffer_ohne_hausnummer_unklar():
+    t = ld.Treffer(48.1, 11.5, "by", "Musterweg, Musterstadt", hausnummer=False, rang=26)
+    with pytest.raises(ld.UnklareAdresse):
+        ld.waehle_treffer([t], mit_hausnummer=True)
+    assert ld.waehle_treffer([t], mit_hausnummer=False) == t
+
+
+def test_treffer_nur_ort_unklar():
+    t = ld.Treffer(48.1, 11.5, "by", "Musterstadt", hausnummer=False, rang=16)
+    with pytest.raises(ld.UnklareAdresse):
+        ld.waehle_treffer([t], mit_hausnummer=False)
+
+
+def test_geocode_liest_hausnummer_und_rang(monkeypatch):
+    antwort = [{"lat": "48.1", "lon": "11.5", "display_name": "Musterweg 8", "place_rank": 30,
+                "address": {"state": "Bayern", "house_number": "8"}}]
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=antwort))) as c:
+        t = ld.geocode("Musterweg 8", client=c)[0]
+    assert t.hausnummer is True and t.rang == 30
+
+
+# --- Cache: Fehlerseiten nicht als Kachel ablegen -------------------------------------------
+
+def test_html_fehlerseite_nicht_im_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(ld, "cache_ordner", lambda: tmp_path)
+    html = b"<!DOCTYPE html><html><body>Wartung</body></html>"
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=html))) as c:
+        with pytest.raises(ld.KachelFehlt):
+            ld.lade("https://x.test/kachel.gml", client=c, max_bytes=10_000)
+    assert not any(p.suffix == ".gml" for p in tmp_path.rglob("*"))
