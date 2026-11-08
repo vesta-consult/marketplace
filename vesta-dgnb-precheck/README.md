@@ -1,40 +1,30 @@
-# Vesta DGNB-Pre-Check — Claude-Code-Plugin (A2A)
+# Vesta DGNB-Vorcheck
 
-Beantwortet in natürlicher Sprache **früh in der Planungsphase**, ob eine angestrebte
-**DGNB-Zertifizierungsstufe** (Silber/Gold/Platin) für ein **Nutzungsprofil** erreichbar ist —
-und liefert einen **priorisierten Maßnahmenkatalog**, was dafür zu erfüllen/umzusetzen ist.
-Über den Vesta-A2A-Endpoint (Rahmenvertrag-Token). Die Bewertungslogik und der
-DGNB-Kriterienkatalog liegen **server-seitig bei Vesta** (deterministisch über einen
-sign-off-verifizierten Kern); das Plugin ist der dünne Client + der anfrage-extrahierende Agent.
+Plugin für Claude Code aus dem [Vesta Marktplatz](../README.md). Der Vorcheck schätzt früh in der Planung, ob eine DGNB-Stufe (Silber, Gold, Platin) für ein Nutzungsprofil erreichbar ist, und liefert einen Maßnahmenkatalog, nach Wirkung sortiert. Kriterien und Bewertungslogik liegen bei Vesta, das Plugin ist der dünne Client.
 
-> Unverbindliche Orientierung — **keine** Zertifizierungs-Zusage. Die verbindliche
-> Zertifizierung trifft die DGNB-Zertifizierungsstelle; der Erfüllungsgrad ist eine Prognose.
-> Jede Antwort trägt einen Haftungsausschluss.
+Überblick, Ablauf, Datenschutz und Haftung stehen in der [Haupt-README](../README.md#dgnb-vorcheck).
 
-## Installation
+> Prognose, keine Zusage einer Zertifizierung. Verbindlich bewertet nur die DGNB-Zertifizierungsstelle. Jede Antwort trägt einen Haftungshinweis.
+
+## Einbinden
 
 ```
 /plugin marketplace add vesta-consult/marketplace
-/plugin install vesta-dgnb-precheck
-/vesta-dgnb-precheck:setup <rahmenvertrag-token>
+/plugin install vesta-dgnb-precheck@vesta
+/vesta-dgnb-precheck:setup <token>
 ```
 
-Den `vesta-frame-…`-Token erhältst du von Vesta (Rahmenvertrag). `setup` legt ihn nutzerweit
-unter `~/.config/vesta/dgnb-precheck.env` ab — nie in ein Projekt-Repo committen.
+Den Token (Format `vesta-frame-…`) bekommst du von Vesta mit dem Rahmenvertrag. `setup` legt ihn unter `~/.config/vesta/dgnb-precheck.env` ab, nicht im Projekt; in ein Repo gehört er nie. Voraussetzung: [uv](https://docs.astral.sh/uv/).
 
 ## Nutzung
 
-Einfach im Chat fragen, z.B.:
+Im Chat fragen, zum Beispiel:
 
-> „Wir planen ein Wohngebäude und wollen DGNB Gold erreichen — ist das machbar und was müssen
-> wir dafür tun?"
+> Wir planen ein Wohngebäude und wollen DGNB Gold erreichen. Ist das machbar, und was müssen wir dafür tun?
 
-Der Agent extrahiert die Anfrage (Nutzungsprofil + Zielstufe + ggf. grobe Punkte-Einschätzung),
-ruft Vesta und bereitet die Einschätzung auf (erreichte Stufe + Gesamterfüllungsgrad +
-priorisierter Maßnahmenkatalog + noch-nicht-bewertete Kriterien + Haftungsausschluss). Fehlt
-die Zielstufe, fragt er nach, statt zu raten.
+Der Agent nimmt Zielstufe, Nutzungsprofil (derzeit Wohngebäude) und, falls vorhanden, deine Punkte-Einschätzung je Kriterium auf. Fehlt die Zielstufe, fragt er nach. Punkte erfindet er nicht: Kriterien ohne Angabe bleiben „nicht bewertet“. Die Antwort enthält die erreichte Stufe, den Gesamterfüllungsgrad, ob die Zielstufe erreichbar ist, den Maßnahmenkatalog mit dem größten Hebel zuerst, die noch nicht bewerteten Kriterien und den Haftungshinweis.
 
-## Manuell (ohne Agent)
+## Ohne Agent
 
 ```bash
 uv run scripts/vesta_dgnb_client.py card
@@ -42,8 +32,7 @@ uv run scripts/vesta_dgnb_client.py bewerten \
   --profil wohngebaeude --ziel-stufe gold --scores '{"env1.1": 70}'
 ```
 
-`--scores` ist optional — ohne Punkte-Einschätzung liefert der Pre-Check aus dem Nullpunkt
-heraus den vollständigen Maßnahmenkatalog für die Zielstufe.
+`--scores` ist optional. Ohne Punkte-Einschätzung rechnet der Vorcheck vom Nullpunkt und liefert den vollständigen Maßnahmenkatalog für die Zielstufe.
 
-Konfiguration via Env (oder `~/.config/vesta/dgnb-precheck.env`):
-`VESTA_A2A_URL` (Default `https://a2a.zukunftimmobilie.de/customer`), `VESTA_CUSTOMER_TOKEN`.
+Konfiguration über Umgebungsvariablen oder `~/.config/vesta/dgnb-precheck.env`:
+`VESTA_A2A_URL` (Standard `https://a2a.zukunftimmobilie.de/customer`), `VESTA_CUSTOMER_TOKEN`.
