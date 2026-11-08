@@ -143,23 +143,23 @@ Der Vorcheck schätzt früh in der Planung, ob eine DGNB-Stufe (Silber, Gold, Pl
 ## Wie es funktioniert
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif", "primaryColor": "#FFFFFF", "primaryTextColor": "#001B19", "primaryBorderColor": "#456457", "lineColor": "#6B6B6B", "clusterBkg": "#F2F2F2", "clusterBorder": "#DADADA", "titleColor": "#001B19", "edgeLabelBackground": "#F2F2F2"}}}%%
+%%{init: {"theme": "base", "flowchart": {"rankSpacing": 40, "nodeSpacing": 30}, "themeVariables": {"fontFamily": "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif", "primaryColor": "#FFFFFF", "primaryTextColor": "#001B19", "primaryBorderColor": "#456457", "lineColor": "#6B6B6B", "clusterBkg": "#F2F2F2", "clusterBorder": "#DADADA", "titleColor": "#001B19", "edgeLabelBackground": "#F2F2F2"}}}%%
 flowchart LR
     subgraph DU["Bei dir"]
-        A["Eigener Agent<br/>z. B. Claude Code"]
+        A["Eigener<br/>Agent"]
         P["Vesta-Plugin<br/>dünner Client"]
     end
     subgraph VESTA["Bei Vesta"]
-        G["Vesta-Gateway<br/>Vertrag · Kontingent"]
-        K["Rechenkern<br/>nach festen Regeln"]
+        G["Vesta-Gateway<br/>Vertrag ·<br/>Kontingent"]
+        K["Rechenkern<br/>deterministisch"]
     end
-    R["Antwort<br/>mit Quellen und<br/>Haftungshinweis"]
+    R["Antwort mit<br/>Quellen und<br/>Haftungshinweis"]
 
-    A -->|Frage| P
-    P -->|"Anfrage per A2A,<br/>mit Token"| G
-    G -->|"1 Abruf gebucht"| K
+    A --> P
+    P -->|"A2A<br/>+ Token"| G
+    G --> K
     K --> R
-    R -.->|zurück an deinen Agenten| A
+    R -.-> A
 
     classDef kern fill:#01FAAE,stroke:#001B19,color:#001B19
     classDef antwort fill:#FFFFFF,stroke:#007A5A,stroke-width:2px,color:#001B19
