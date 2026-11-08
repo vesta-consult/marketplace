@@ -1,6 +1,9 @@
 {
   "name": "vesta",
-  "owner": { "name": "vesta sustainability consulting", "url": "https://vesta-consult.de" },
+  "owner": {
+    "name": "vesta sustainability consulting",
+    "url": "https://vesta-consult.de"
+  },
   "metadata": {
     "description": "Vesta-Marketplace: Claude-Code-Plugins für Vestas agentische Dienste (A2A) — Bauphysik, Nachhaltigkeit, LCA, Förderung."
   },
@@ -13,7 +16,7 @@
     {
       "name": "vesta-foerder-check",
       "source": "./vesta-foerder-check",
-      "description": "Vesta Förder-Check (A2A) — Mandanten-Profil → passende Bau-Förderprogramme (Bund/Land) inkl. Kumulierung + Förderhöhe."
+      "description": "Vesta Förder-Check (A2A) — Mandanten-Profil → passende Bau-Förderprogramme (Bund/Land) inkl. Kumulierung + Förderhöhe, als Dashboard mit optionalem 3D-Modell."
     },
     {
       "name": "vesta-dgnb-precheck",
