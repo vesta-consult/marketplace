@@ -13,7 +13,7 @@ Aufgabe:
    mit folgendem Inhalt (Token aus dem Argument bzw. der Nutzerantwort einsetzen):
 
    ```
-   VESTA_A2A_URL=https://a2a.zukunftimmobilie.de/customer
+   VESTA_A2A_URL=https://agents.vesta-consult.de/customer
    VESTA_CUSTOMER_TOKEN=<token>
    ```
 

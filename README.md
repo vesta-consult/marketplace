@@ -56,7 +56,7 @@ Der Förder-Check prüft, welche Förderprogramme von Bund und Ländern für ein
 
 | Eingabe | Ausgabe |
 |---|---|
-| Freitext. Der Agent bildet daraus ein Profil: Zielgruppe, Assetklasse, Ebene (Gebäude, Quartier, Portfolio), Vorhaben (z. B. Neubau, Sanierung, Heizung), Bundesland | Passende Programme mit Förderart und Förderhöhe, soweit bezifferbar · Kumulierung · Quellen · ausgeschlossene Programme mit Grund · Haftungshinweis · Zusammenfassung als HTML |
+| Freitext. Der Agent bildet daraus ein Profil: Zielgruppe, Assetklasse, Ebene (Gebäude, Quartier, Portfolio), Vorhaben (z. B. Neubau, Sanierung, Heizung), Bundesland | Passende Programme mit Förderart und Förderhöhe, soweit bezifferbar · Kumulierung · Quellen · ausgeschlossene Programme mit Grund · Haftungshinweis · Dashboard als HTML im Projektordner, mit 3D-Modell des Gebäudes, wenn eines vorliegt oder sich laden lässt |
 
 **Beispielfrage**
 
@@ -175,8 +175,9 @@ flowchart LR
 
 ## Datenschutz
 
-- An Vesta geht nur die strukturierte Anfrage: beim Förder-Check das Profil, beim Quick-Check die Akte mit Bauteilen, Mengen und Energiewerten, beim DGNB-Vorcheck Zielstufe, Profil und gegebenenfalls Punkte. Personenbezogene Daten braucht keiner der Dienste.
+- An Vesta geht nur die strukturierte Anfrage: beim Förder-Check das Profil, Projekt-ID und Projektname und, falls vorhanden, das 3D-Modell des Gebäudes mit seiner Lage (ohne Adresse), beim Quick-Check die Akte mit Bauteilen, Mengen und Energiewerten, beim DGNB-Vorcheck Zielstufe, Profil und gegebenenfalls Punkte. Personenbezogene Daten braucht keiner der Dienste.
 - IFC-Modelle und Projektdokumente bleiben auf deinem Rechner. Die Auswertung läuft dort.
+- Für das 3D-Modell beim Förder-Check geht die Adresse an OpenStreetMap Nominatim und an den Download-Server des Landes, nicht an Vesta.
 - Die Rechenkerne laufen auf Servern von Vesta in Deutschland. Jeder Abruf wird protokolliert, das ist die Grundlage der Abrechnung.
 - Frage und Antwort laufen auch über deinen Chat-Anbieter, bei Claude über Anthropic. Dafür gelten dessen Bedingungen und eure eigenen Regeln.
 - Dieses Repo enthält keinen Server-Code, keine Datenbestände und keine Tokens. Deinen Token committest du nie in ein Projekt-Repo.
