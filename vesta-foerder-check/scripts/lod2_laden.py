@@ -13,9 +13,11 @@ import functools
 import hashlib
 import json
 import math
+import os
 import re
 import shutil
 import ssl
+import sys
 import time
 import zipfile
 from dataclasses import dataclass
@@ -95,11 +97,83 @@ class KachelFehlt(Exception):
     """Für diese Stelle gibt es keine Kachel (404 oder nicht im Index)."""
 
 
-def http_client() -> httpx.Client:
-    import truststore
+def _ist_tls_fehler(exc: Exception) -> bool:
+    text = str(exc).upper()
+    return any(m in text for m in ("CERTIFICATE", "SSL", "OSSTATUS", "TLS"))
 
+
+class _TlsRueckfall(httpx.BaseTransport):
+    """Probiert Zertifikatsquellen der Reihe nach, bleibt bei der ersten, die funktioniert.
+
+    Reihenfolge aus `_tls_kontexte()`: Zertifikatsspeicher des Systems (truststore), certifi-Bündel,
+    `/etc/ssl/cert.pem`. Hintergrund: In abgeschotteten Umgebungen (etwa der Sandbox von Claude Code
+    unter macOS) ist der Zertifikatsdienst des Systems gesperrt (OSStatus -26276) und teils auch das
+    Lesen von .pem-Dateien. Die Prüfung wird nie abgeschaltet, nur die Quelle der Wurzeln wechselt.
+    """
+
+    def __init__(self, transporte: list[httpx.BaseTransport]) -> None:
+        if not transporte:
+            raise ValueError("Keine nutzbare Zertifikatsquelle für TLS gefunden.")
+        self._transporte = list(transporte)
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        while True:
+            try:
+                return self._transporte[0].handle_request(request)
+            except httpx.ConnectError as exc:
+                if not _ist_tls_fehler(exc) or len(self._transporte) == 1:
+                    raise
+                self._transporte.pop(0).close()
+                print(
+                    "[HINWEIS] Zertifikatsquelle nicht nutzbar, prüfe TLS mit der nächsten "
+                    "(certifi bzw. System-Bündel).",
+                    file=sys.stderr,
+                )
+
+    def close(self) -> None:
+        for t in self._transporte:
+            t.close()
+
+
+def _tls_kontexte() -> list[ssl.SSLContext]:
+    """Alle Zertifikatsquellen, die sich hier laden lassen, in fester Reihenfolge."""
+    kandidaten = []
+
+    def truststore_kontext() -> ssl.SSLContext:
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    def certifi_kontext() -> ssl.SSLContext:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+
+    def system_buendel() -> ssl.SSLContext:
+        return ssl.create_default_context(cafile="/etc/ssl/cert.pem")
+
+    for bauen in (truststore_kontext, certifi_kontext, system_buendel):
+        try:
+            kandidaten.append(bauen())
+        except Exception:  # noqa: BLE001 - Quelle fehlt oder ist nicht lesbar
+            continue
+    return kandidaten
+
+
+def _proxy_aus_umgebung() -> str | None:
+    """HTTPS-Proxy aus der Umgebung. Ein eigener Transport übernimmt ihn nicht von selbst."""
+    for k in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy"):
+        wert = os.environ.get(k, "").strip()
+        if wert:
+            return wert
+    return None
+
+
+def http_client() -> httpx.Client:
+    proxy = _proxy_aus_umgebung()
+    transporte = [httpx.HTTPTransport(verify=k, proxy=proxy) for k in _tls_kontexte()]
     return httpx.Client(
-        verify=truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT),
+        transport=_TlsRueckfall(transporte),
         timeout=httpx.Timeout(30.0, read=120.0),
         follow_redirects=True,
         headers={"User-Agent": UA},

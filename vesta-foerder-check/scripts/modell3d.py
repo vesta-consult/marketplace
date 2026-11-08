@@ -4,6 +4,7 @@
 # dependencies = [
 #   "httpx>=0.27",
 #   "truststore>=0.9",
+#   "certifi>=2024.2",
 #   "platformdirs>=4",
 #   "pyproj>=3.6",
 #   "lxml>=5",

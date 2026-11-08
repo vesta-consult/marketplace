@@ -304,3 +304,67 @@ def test_cache_ordner_plattform():
     p = ld.cache_ordner()
     # macOS ~/Library/Caches/vesta/lod2, Linux ~/.cache/vesta/lod2, Windows …\vesta\Cache\lod2
     assert p.name == "lod2" and "vesta" in p.parts
+
+
+# --- TLS-Rückfall: System-Zertifikatsspeicher nicht nutzbar (z. B. Claude-Code-Sandbox) -------
+
+class _TlsKaputt(httpx.BaseTransport):
+    def handle_request(self, request):
+        raise httpx.ConnectError(
+            "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (OSStatus -26276)",
+            request=request,
+        )
+
+
+class _NetzWeg(httpx.BaseTransport):
+    def handle_request(self, request):
+        raise httpx.ConnectError("[Errno 8] nodename nor servname provided", request=request)
+
+
+def test_tls_rueckfall_auf_certifi(capsys):
+    t = ld._TlsRueckfall([_TlsKaputt(), _TlsKaputt(), httpx.MockTransport(lambda r: httpx.Response(200, text="ok"))])
+    with httpx.Client(transport=t) as c:
+        assert c.get("https://x.test/a").text == "ok"
+        assert c.get("https://x.test/b").text == "ok"
+    assert "certifi" in capsys.readouterr().err
+
+
+def test_kein_rueckfall_bei_anderem_netzfehler():
+    t = ld._TlsRueckfall([_NetzWeg(), httpx.MockTransport(lambda r: httpx.Response(200))])
+    with httpx.Client(transport=t) as c, pytest.raises(httpx.ConnectError):
+        c.get("https://x.test/")
+
+
+def test_http_client_nutzt_rueckfall():
+    with ld.http_client() as c:
+        assert isinstance(c._transport, ld._TlsRueckfall)
+
+
+def test_tls_kontexte_ueberspringt_unlesbares(monkeypatch):
+    import certifi
+
+    monkeypatch.setattr(certifi, "where", lambda: "/gibt/es/nicht/cacert.pem")
+    kontexte = ld._tls_kontexte()
+    assert len(kontexte) >= 1
+    assert all(isinstance(k, __import__("ssl").SSLContext) for k in kontexte)
+
+
+def test_alle_tls_quellen_scheitern_meldet_tls():
+    t = ld._TlsRueckfall([_TlsKaputt(), _TlsKaputt()])
+    with httpx.Client(transport=t) as c, pytest.raises(httpx.ConnectError, match="CERTIFICATE"):
+        c.get("https://x.test/")
+
+
+def test_proxy_aus_umgebung(monkeypatch):
+    for k in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy"):
+        monkeypatch.delenv(k, raising=False)
+    assert ld._proxy_aus_umgebung() is None
+    monkeypatch.setenv("https_proxy", "http://proxy.test:3128")
+    assert ld._proxy_aus_umgebung() == "http://proxy.test:3128"
+
+
+def test_http_client_nutzt_proxy(monkeypatch):
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.test:3128")
+    with ld.http_client() as c:
+        pools = [type(t._pool).__name__ for t in c._transport._transporte]
+    assert pools and all(p == "HTTPProxy" for p in pools)
